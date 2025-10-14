@@ -1,8 +1,12 @@
-const http = require('http');
+const express = require('express');
 const https = require('https');
+const bodyParser = require('body-parser');
+
+const app = express();
+app.use(bodyParser.json());
 
 const PORT = process.env.PORT || 3000;
-const TOKEN = '7983988659:AAHkUSkpyisj2KXtfZdax1hCJB9lWwS7CHI'; // التوكن الخاص بك
+const TOKEN = '7983988659:AAHkUSkpyisj2KXtfZdax1hCJB9lWwS7CHI';
 
 // دالة لإرسال رسالة
 const sendMessage = (chat_id, text) => {
@@ -13,47 +17,35 @@ const sendMessage = (chat_id, text) => {
     method: 'POST',
     headers: { 
       'Content-Type': 'application/json',
-      'Content-Length': data.length 
+      'Content-Length': data.length
     },
   };
   const req = https.request(options, res => { res.on('data', () => {}); });
-  req.on('error', error => { console.error(error); });
+  req.on('error', error => console.error(error));
   req.write(data);
   req.end();
 };
 
-// دالة لتوليد رد تلقائي (يمكنك تعديل النص هنا)
+// دالة لتوليد رد تلقائي
 const generateReply = (text) => {
-  return `لقد أرسلت: "${text}" 👌`;
+  // مثال: إعادة نفس الرسالة مع كلمة مرحبًا
+  return `مرحبًا! لقد أرسلت: "${text}"`;
 };
 
-// السيرفر لاستقبال Webhook من تلغرام
-const server = http.createServer((req, res) => {
-  if (req.method === 'POST') {
-    let body = '';
-    req.on('data', chunk => { body += chunk.toString(); });
-    req.on('end', () => {
-      try {
-        const update = JSON.parse(body);
-        if (update.message && update.message.text) {
-          const chatId = update.message.chat.id;
-          const userText = update.message.text;
+// مسار Webhook
+app.post('/', (req, res) => {
+  const update = req.body;
+  if (update.message && update.message.text) {
+    const chatId = update.message.chat.id;
+    const userText = update.message.text;
 
-          // إرسال الرد التلقائي
-          const replyText = generateReply(userText);
-          sendMessage(chatId, replyText);
-        }
-      } catch (e) {
-        console.error('Error parsing update:', e);
-      }
-      res.end('ok');
-    });
-  } else {
-    res.end('ok');
+    // إرسال الرد التلقائي
+    sendMessage(chatId, generateReply(userText));
   }
+  res.send('ok');
 });
 
 // بدء السيرفر
-server.listen(PORT, () => {
+app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
 });
